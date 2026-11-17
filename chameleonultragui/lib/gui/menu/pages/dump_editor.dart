@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:chameleonultragui/helpers/definitions.dart';
 import 'package:chameleonultragui/helpers/general.dart';
 import 'package:chameleonultragui/helpers/mifare_classic/general.dart';
 import 'package:chameleonultragui/helpers/mifare_ultralight/general.dart';
@@ -7,6 +8,7 @@ import 'package:chameleonultragui/helpers/mifare_classic/dump_highlighter.dart';
 import 'package:chameleonultragui/helpers/mifare_classic/dump_analyzer.dart';
 import 'package:chameleonultragui/helpers/mifare_ultralight/dump_highlighter.dart';
 import 'package:chameleonultragui/helpers/mifare_ultralight/dump_analyzer.dart';
+import 'package:chameleonultragui/helpers/mifare_ultralight/ulc.dart';
 import 'package:chameleonultragui/helpers/ndef.dart';
 import 'package:chameleonultragui/gui/menu/pages/ndef_editor.dart';
 import 'package:chameleonultragui/sharedprefsprovider.dart';
@@ -41,6 +43,7 @@ class DumpEditorState extends State<DumpEditor> {
   String compareName = '';
   ScrollController scrollController = ScrollController();
   late bool isUltralight;
+  late bool isUlc;
   late int bytesPerBlock;
   late int hexCharsPerBlock;
 
@@ -48,6 +51,7 @@ class DumpEditorState extends State<DumpEditor> {
   void initState() {
     super.initState();
     isUltralight = isMifareUltralight(widget.cardSave.tag);
+    isUlc = widget.cardSave.tag == TagType.ultralightC;
     bytesPerBlock = isUltralight ? 4 : 16;
     hexCharsPerBlock = bytesPerBlock * 2;
     initEditor();
@@ -750,6 +754,83 @@ class DumpEditorState extends State<DumpEditor> {
     for (final controller in asciiControllers) {
       controller.dispose();
     }
+  }
+
+  Future<void> _showUlcConfig() async {
+    if (!isUlc) return;
+    var localizations = AppLocalizations.of(context)!;
+
+    final current = _currentEditorDump();
+    final config = current == null ? null : ulcDecodeConfig(current);
+
+    Widget row(String label, String value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 150,
+                child: Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: SelectableText(value)),
+            ],
+          ),
+        );
+
+    String pageList(List<int> pages) => pages.isEmpty
+        ? localizations.none
+        : pages.map((p) => '0x${p.toRadixString(16).padLeft(2, '0')}').join(', ');
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(localizations.ulc_config),
+        content: SizedBox(
+          width: 420,
+          child: config == null
+              ? Text(localizations.ulc_config_unavailable)
+              : SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      row(
+                        'AUTH0',
+                        config.protectionDisabled
+                            ? '0x${config.auth0.toRadixString(16).padLeft(2, '0')} '
+                                '(${localizations.ulc_protection_disabled})'
+                            : localizations.ulc_protected_from_page(
+                                '0x${config.auth0.toRadixString(16).padLeft(2, '0')}'),
+                      ),
+                      row(
+                        'AUTH1',
+                        config.protectionMode == UlcProtectionMode.writeOnly
+                            ? localizations.ulc_write_only
+                            : localizations.ulc_read_write_protected,
+                      ),
+                      row(localizations.counter, config.counter.toString()),
+                      row(
+                        localizations.ulc_static_lock,
+                        pageList(config.staticLockedPages),
+                      ),
+                      row(
+                        localizations.ulc_dynamic_lock,
+                        pageList(config.dynamicLockedPages),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(localizations.ok),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showAccessConditions() async {
@@ -1959,6 +2040,11 @@ class DumpEditorState extends State<DumpEditor> {
                         onPressed: _showAsciiView,
                         child: Text(localizations.ascii),
                       ),
+                      if (isUlc)
+                        ElevatedButton(
+                          onPressed: _showUlcConfig,
+                          child: Text(localizations.ulc_config),
+                        ),
                       if (!isUltralight) ...[
                         ElevatedButton(
                           onPressed: _showAccessConditions,

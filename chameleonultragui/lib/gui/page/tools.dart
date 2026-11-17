@@ -8,6 +8,8 @@ import 'package:chameleonultragui/gui/menu/tools/t55xx_password_cleaner.dart';
 import 'package:chameleonultragui/main.dart';
 import 'package:chameleonultragui/gui/menu/tools/mifare_value_blocks.dart';
 import 'package:chameleonultragui/gui/menu/tools/raw_commands.dart';
+import 'package:chameleonultragui/gui/menu/tools/ulc_key_check.dart';
+import 'package:chameleonultragui/gui/menu/tools/ulc_change_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:chameleonultragui/gui/component/element_button.dart';
@@ -91,6 +93,20 @@ class ToolsPageState extends State<ToolsPage> {
         description: localizations.mifare_classic_gen4_description,
         icon: Icons.settings,
         onPressed: const Gen4Menu(),
+        isDeviceRequired: true,
+      ),
+      ToolItem(
+        name: localizations.ulc_key_check,
+        description: localizations.ulc_key_check_tool_description,
+        icon: Icons.vpn_key,
+        onPressed: const UlcKeyCheckMenu(),
+        isDeviceRequired: true,
+      ),
+      ToolItem(
+        name: localizations.ulc_change_key,
+        description: localizations.ulc_change_key_tool_description,
+        icon: Icons.key_off,
+        onPressed: const UlcChangeKeyMenu(),
         isDeviceRequired: true,
       ),
     ];

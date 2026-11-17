@@ -7,6 +7,7 @@ import 'package:chameleonultragui/helpers/general.dart';
 import 'package:chameleonultragui/helpers/mifare_classic/general.dart';
 import 'package:chameleonultragui/helpers/mifare_classic/recovery.dart';
 import 'package:chameleonultragui/helpers/mifare_ultralight/general.dart';
+import 'package:chameleonultragui/helpers/nfc_manufacturers.dart';
 import 'package:chameleonultragui/main.dart';
 import 'package:chameleonultragui/sharedprefsprovider.dart';
 import 'package:chameleonultragui/connector/serial_abstract.dart';
@@ -285,6 +286,23 @@ class ReadCardPageState extends State<ReadCardPage> {
     appState.sharedPreferencesProvider.setCards(tags);
   }
 
+  /// Decodes the chip manufacturer from the first UID byte (ISO/IEC 7816-6),
+  /// the same value Proxmark prints as "Manufacturer". Returns null when the
+  /// UID is missing or the ID is not in the known list.
+  String? _manufacturerLabel() {
+    if (hfInfo.uid.isEmpty) return null;
+    Uint8List uidBytes;
+    try {
+      uidBytes = hexToBytes(hfInfo.uid);
+    } catch (_) {
+      return null;
+    }
+    if (uidBytes.isEmpty) return null;
+    final name = nfcManufacturerName(uidBytes[0]);
+    if (name == null) return null;
+    return '$name (0x${uidBytes[0].toRadixString(16).padLeft(2, '0').toUpperCase()})';
+  }
+
   Widget buildFieldRow(String label, String value, double fontSize) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -343,6 +361,9 @@ class ReadCardPageState extends State<ReadCardPage> {
                           localizations.atqa, hfInfo.atqa, fieldFontSize),
                       buildFieldRow(
                           localizations.ats, hfInfo.ats, fieldFontSize),
+                      if (_manufacturerLabel() != null)
+                        buildFieldRow(localizations.manufacturer,
+                            _manufacturerLabel()!, fieldFontSize),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
