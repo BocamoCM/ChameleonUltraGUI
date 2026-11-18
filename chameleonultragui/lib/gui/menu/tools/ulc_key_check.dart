@@ -62,7 +62,7 @@ class UlcKeyCheckMenuState extends State<UlcKeyCheckMenu> {
 
     if (selectedDictionaryId != null) {
       final dict = appState.sharedPreferencesProvider
-          .getDictionaries(keyLength: 16)
+          .getDictionaries(keyLength: 32)
           .where((d) => d.id == selectedDictionaryId)
           .firstOrNull;
       if (dict != null) {
@@ -211,7 +211,7 @@ class UlcKeyCheckMenuState extends State<UlcKeyCheckMenu> {
     var localizations = AppLocalizations.of(context)!;
 
     final dictionaries =
-        appState.sharedPreferencesProvider.getDictionaries(keyLength: 16);
+        appState.sharedPreferencesProvider.getDictionaries(keyLength: 32);
 
     return AlertDialog(
       title: Text(localizations.ulc_key_check),
